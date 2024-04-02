@@ -7,8 +7,8 @@ import plotly.graph_objects as go
 
 # Download historical data for "WEAT" (Wheat ETF) from Yahoo Finance
 ticker = "WEAT"
-start_date = "2020-01-01"
-end_date = "2021-12-31"
+start_date = "2000-01-01"
+end_date = "2023-12-31"
 data = yf.download(ticker, start=start_date, end=end_date)
 
 # Calculate 20-day and 50-day moving averages
@@ -50,7 +50,8 @@ fig.add_trace(go.Scatter(x=data.index[data["Sell Signal"] == -1], y=data["Close"
 fig.update_layout(title="Wheat Trading System Backtesting",
                   xaxis_title="Date",
                   yaxis_title="Price",
-                  xaxis_rangeslider_visible=False)
+                  xaxis_rangeslider_visible=False,
+                  )
 
 # Print results
 print(f"Initial balance: ${initial_balance:.2f}")
