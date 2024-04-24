@@ -1,2 +1,2 @@
 # stock_analysis
-This repocontains analysis of stock data
+This repo contains analysis of stock data
