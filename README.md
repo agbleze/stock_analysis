@@ -5,3 +5,4 @@ This repo contains analysis of stock data.
 
 
 
+# How to use
