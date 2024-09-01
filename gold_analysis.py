@@ -13,4 +13,4 @@ data = pd.read_csv(file_path)
 
 
 # %%
-px.
+px.line(data_frame=data, y="Close", x="Date", template="plotly_dark")
