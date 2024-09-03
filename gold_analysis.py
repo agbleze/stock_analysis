@@ -43,5 +43,23 @@ bac_data = pd.read_csv(bac_filepath)
 px.line(data_frame=bac_data, y="Low", x="Date", template="plotly_dark",
         title="Bank of America daily stocks")
 #%%
-(110/100)*31
+(110/100)*40
+# %%
+(14.92/14.44)*100
+# %%
+(32.58/40)
+# %%
+
+adesso_datapath = "/home/lin/codebase/stock_analysis/ADN1.DE.csv"
+
+adesso_data = pd.read_csv(adesso_datapath)
+
+#%%
+adesso_data.sort_values(by="Date", ascending=False)
+# %%
+px.line(data_frame=adesso_data, y="Close", x="Date", template="plotly_dark",
+        title="Adesso daily stocks"
+        )
+# %%
+adesso_data.sort_values(by="Date", ascending=False).head(50)
 # %%

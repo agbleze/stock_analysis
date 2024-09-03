@@ -62,3 +62,8 @@ print(f"Profit: ${profit:.2f}")
 fig.show()
 
 # %%
+ticker = "ADN1.DE"
+
+#%%
+yf.download(tickers=ticker)
+# %%
