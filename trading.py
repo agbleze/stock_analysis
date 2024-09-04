@@ -67,3 +67,58 @@ ticker = "ADN1.DE"
 #%%
 yf.download(tickers=ticker)
 # %%
+crwd_ticker = "45C.F"
+
+crwdshare_data = yf.download(tickers=crwd_ticker)
+# %%
+crwdshare_asd = crwdshare_data.sort_values(by="Date", ascending=False)
+# %%
+crwdshare_asd.head(50)
+
+
+# %%
+crwdshare_asd.info()
+# %%
+crwdshare_asd.columns
+# %%
+crwdshare_asd.index.year
+# %%
+crwdshare_asd["month"] = crwdshare_asd.index.month
+crwdshare_asd["day"] = crwdshare_asd.index.day
+crwdshare_asd["weekday"] =crwdshare_asd.index.weekday
+crwdshare_asd["day_name"] = crwdshare_asd.index.day_name()
+crwdshare_asd["year"] = crwdshare_asd.index.year
+# %%
+
+crwdshare_asd.groupby(by="day_name")[["Close"]].mean()
+
+#%%
+
+crwdshare_asd.month.unique()
+# %%
+crwdshare_asd[crwdshare_asd["month"]==9].groupby(by=["month","day_name"])[["Close"]].mean()
+# %%
+crwdshare_asd.groupby(by="month")[["Close"]].mean().sort_values(by="Close")
+# %%
+crwdshare_asd[["Close"]].diff(-1).min()
+# %%
+# develop the inverted triangle trading strategy
+# start by getting the opening price
+# monitor prices afterward to ensure they drop by a
+# certain huge margin
+# if this huge margin is meet, then trigger a buy 
+
+## loss exit watch
+# watch the price after buying, if they fall further 
+# to a certain margin, exit with a loss
+
+## watch profit exit
+# monitor price after buying if monitored price
+# is up to a certain margin above the buy price 
+# then exit with profit
+# design the algorithm in such a way that it triggers 
+# not more than 1 in a week
+
+
+
+
