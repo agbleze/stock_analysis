@@ -4,6 +4,9 @@ import yfinance as yf
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
+import plotly.express as px
+
+#%%
 
 # Download historical data for "WEAT" (Wheat ETF) from Yahoo Finance
 ticker = "WEAT"
@@ -88,6 +91,7 @@ crwdshare_asd["day"] = crwdshare_asd.index.day
 crwdshare_asd["weekday"] =crwdshare_asd.index.weekday
 crwdshare_asd["day_name"] = crwdshare_asd.index.day_name()
 crwdshare_asd["year"] = crwdshare_asd.index.year
+crwdshare_asd["month_name"] = crwdshare_asd.index.month_name()
 # %%
 
 crwdshare_asd.groupby(by="day_name")[["Close"]].mean()
@@ -119,6 +123,50 @@ crwdshare_asd[["Close"]].diff(-1).min()
 # design the algorithm in such a way that it triggers 
 # not more than 1 in a week
 
+#%%
+crwdshare_asd.columns
 
 
 
+# %%
+px.line(data_frame=crwdshare_asd, y="Close")
+# %%
+import os
+img_dir = "/home/lin/codebase/stock_analysis/images"
+os.makedirs(img_dir, exist_ok=True)
+for mth in crwdshare_asd.month_name.unique():
+    data = crwdshare_asd[(crwdshare_asd.month_name == mth) & (crwdshare_asd.year==2023)]
+    fig = px.line(data_frame=data, y="Close", 
+                  template="plotly_dark",
+                  title=f"{mth} Close price - crowdstrike",
+                  #height=800, width=1800
+                  )
+    image = os.path.join(img_dir, f"{mth}.jpg")
+    fig.write_image(image)
+    
+# %%
+def create_monthly_graphs():
+    pass
+
+
+
+#%%
+
+# AI for trading, cv
+# a model to predict whether to trade, if to trade then indicate entry and exit
+# points. In production, the model will be given images of historical till current stock price charts
+# then it will predict with mark on the chart, when to enter and another mark on,
+# when to exit.
+# approach 1 
+# use GENAI to take a stock chart image  with historical data as imput and the model 
+# generates an image with with both historical and future and prices and then mark enter and exit points 
+
+## approach 2
+# multimodal 
+# -- give the model up to 2/3 of the month data (stock chart) and predicts whether it will 
+# end on a higher value and amount on the last day of the month
+
+
+#### collect data
+# visualize the stock price and save as images. For the
+# training data, indicate enter arrows 
