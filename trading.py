@@ -145,11 +145,125 @@ for mth in crwdshare_asd.month_name.unique():
     fig.write_image(image)
     
 # %%
-def create_monthly_graphs():
-    pass
+def create_monthly_graphs_per_year(data, month, year, images_dir):
+    img_dir = os.path.join(images_dir, str(year))
+    os.makedirs(img_dir, exist_ok=True)
+    data = data[data.year==year]
+    data = data[data.month_name == month]
+    fig = px.line(data_frame=data, y="Close", 
+                template="plotly_dark",
+                title=f"{month} Close price - crowdstrike",
+                #height=800, width=1800
+                )
+    image = os.path.join(img_dir, f"{month}.jpg")
+    fig.write_image(image)
+
+#%%
+create_monthly_graphs_per_year(data=crwdshare_asd, months=crwdshare_asd.month_name.unique(), 
+                               years=crwdshare_asd.year.unique(),
+                               images_dir="images"
+                               )
 
 
 
+#%%
+
+for yr in crwdshare_asd.year.unique():
+    for mth in crwdshare_asd.month_name.unique():
+        create_monthly_graphs_per_year(data=crwdshare_asd,
+                                       month=mth, year=yr, images_dir="images"
+                                       )
+        
+
+
+#%%
+
+nvidia_data = yf.download(tickers="NVD.DE")   
+
+#%%
+
+nvidia_data    
+
+nvidia_data["month"] = nvidia_data.index.month
+nvidia_data["day"] = nvidia_data.index.day
+nvidia_data["weekday"] =nvidia_data.index.weekday
+nvidia_data["day_name"] = nvidia_data.index.day_name()
+nvidia_data["year"] = nvidia_data.index.year
+nvidia_data["month_name"] = nvidia_data.index.month_name()
+#%%
+
+
+for yr in nvidia_data.year.unique():
+    for mth in nvidia_data.month_name.unique():
+        create_monthly_graphs_per_year(data=nvidia_data,
+                                       month=mth, year=yr, images_dir="nvidia_images"
+                                       )
+        
+
+#%%
+# schaeffler
+ticker = "SHA.DE"
+
+scaeffler_df = yf.download(tickers=ticker)
+
+#%%
+
+scaeffler_df
+
+px.line(data_frame=scaeffler_df, y="Close", template="plotly_dark", title="Schaeffler stocks (close)")
+
+#%%
+
+scaeffler_df[["Close"]].describe()
+
+
+#%%
+def create_date_columns(data):
+    data["month"] = data.index.month
+    data["day"] = data.index.day
+    data["weekday"] = data.index.weekday
+    data["day_name"] = data.index.day_name()
+    data["year"] = data.index.year
+    data["month_name"] = data.index.month_name()
+    return data
+
+
+scaeffler_df = create_date_columns(data=scaeffler_df)
+
+#%%
+scaeffler_df.sort_values(by="Date", ascending=False)
+
+
+#%%
+scaeffler_df[["Open"]].describe()
+
+scaeffler_df[scaeffler_df.year==2024]
+
+
+
+#%%
+
+scaeffler_df.sort_values(by="Close").head(50).value_counts("month_name")
+
+#%%
+
+scaeffler_df[["Adj Close"]].max()
+
+
+#%%
+
+scaeffler_df.groupby(by="month_name")["Close"].mean().reset_index().sort_values("Close").describe()
+
+#%%
+
+scaeffler_df.describe()
+#%%
+
+scaeffler_df[["Close"]].min()
+
+#%%
+
+scaeffler_df.year.nunique()
 #%%
 
 # AI for trading, cv
@@ -166,6 +280,12 @@ def create_monthly_graphs():
 # -- give the model up to 2/3 of the month data (stock chart) and predicts whether it will 
 # end on a higher value and amount on the last day of the month
 
+
+# approach 3
+# classification
+# - give the model the stock chart price up to half of the month and let it predict 
+# whether price with end very high, medium, low
+# consider using the moving average to provide trends that can make the prediction easier
 
 #### collect data
 # visualize the stock price and save as images. For the
