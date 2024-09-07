@@ -264,6 +264,176 @@ scaeffler_df[["Close"]].min()
 #%%
 
 scaeffler_df.year.nunique()
+
+
+#%%
+
+scaeffler_df[scaeffler_df["year"].isin([2023, 2022, 2021, 2020])].describe()
+
+#%%
+for yr in scaeffler_df.year.unique():
+    print(yr)
+    print(scaeffler_df[scaeffler_df["year"].isin([yr])].describe())
+
+
+#%%
+
+#scaeffler_df[scaeffler_df["Close"]==17.1]#.index.values  
+ 
+scaeffler_df[scaeffler_df["year"]==2015][["Close"]].max()
+
+
+"""
+describe the data for each year, based on how the mean, max and 25% percentile
+is changing determine regime changes. Buy when the stock price is below the 
+25percentile and exit at the predicted max or 75% percentile
+
+"""
+
+#%%
+
+
+scaeffler_df[scaeffler_df["year"]==2023]
+scaeffler_df["Date"] = scaeffler_df.index.values
+def get_min_max(data, year, param="Close"):
+    data = data[(data["year"]==year)]
+    max_row = data[data[param]==data[param].max()]
+    min_row = data[data[param]==data[param].min()]
+    return min_row, max_row
+
+
+#%%
+scae2023_minrow, scae2023_maxrow = get_min_max(data=scaeffler_df, year=2023)
+
+#%%
+scae2023_minrow
+#%%
+
+scae2023_maxrow
+
+#%%
+
+px.line(data_frame=scaeffler_df[scaeffler_df["year"].isin([2024])], 
+        y="Close",
+        template="plotly_dark"
+        )
+
+
+#%%
+(50/100)*36
+
+(118/100)*11.9
+
+#%%
+def get_price(data, current_year):
+    prev_yr = current_year - 1
+    data = data[data["year"]==prev_yr]
+    stats = data.describe()
+    min_close_price = stats.loc["min"]["Close"]
+    close_price_75per = stats.loc["75%"]["Close"]
+    new_price = (close_price_75per/min_close_price) * 100 
+    percent_diff = new_price - 100
+    percent_to_add = (50/100) * percent_diff
+    exit_price = ((100 + percent_to_add) /100) * min_close_price
+    return min_close_price, exit_price
+
+#%%
+get_price(scaeffler_df, 2024)    
+
+
+#%%
+yr = 2024
+enter_price, exit_price = get_price(scaeffler_df, yr)
+
+print(enter_price, exit_price)
+    
+px.line(data_frame=scaeffler_df[scaeffler_df["year"].isin([yr])], 
+        y="Close",
+        template="plotly_dark"
+        )
+#%%
+
+import numpy as np
+
+np.mean([100, 50, 30, 10, 50])
+#%%
+
+sca_desc = scaeffler_df.describe()
+
+
+#%%
+(105/100)*7.05
+
+
+# adaptiopn to algo
+
+# take 5% profit for each trade after 
+# buying below or above previous year minimum
+# after taking profit, check if 
+# start checking afterwards again if 
+# clossing price is about 50% below intial entried price 
+# and enter trade again
+
+
+## adaptation 2 
+# adjust stop loss
+
+#%%
+(5.82/7.05)*100
+
+#%%
+(70/100)*11.355
+#%%
+
+import pandas as pd
+
+# Sample DataFrame
+df = pd.DataFrame({
+    'num_posts': [4, 6, 3, 9, 1, 14, 2, 5, 7, 2],
+    'date': ['2020-08-09', '2020-08-25', '2020-09-05', '2020-09-12', '2020-09-29', '2020-10-15', '2020-11-21', '2020-12-02', '2020-12-10', '2020-12-18']
+})
+
+# Convert 'date' column to datetime
+df['date'] = pd.to_datetime(df['date'])
+
+# Filter rows with dates above a given date
+given_date = '2020-09-15'
+filtered_df_above = df.loc[df['date'] > given_date]
+
+# Filter rows with dates below a given date
+filtered_df_below = df.loc[df['date'] < given_date]
+
+print("Dates above given date:\n", filtered_df_above)
+print("Dates below given date:\n", filtered_df_below)
+
+#%%
+df.info()
+
+#%%
+
+scaeffler_df[scaeffler_df["Date"] > scae2023_minrow.Date.values[0]]
+
+#%%
+
+scaeffler_df[(scaeffler_df["year"]==scae2023_maxrow.year.values[0]) & (scaeffler_df["Date"] <= scae2023_maxrow.Date.values[0])]
+#%% Is there a signle month that that explains well what will happen the next year?
+
+
+
+    
+    
+#%%
+
+px.line(data_frame=scaeffler_df, y="Close", facet_row="year",
+        template="plotly_dark"
+        )
+
+
+#%%
+px.line(data_frame=scaeffler_df, y="Close", facet_col_wrap="year",
+        template="plotly_dark"
+        )
+#%%
 #%%
 
 # AI for trading, cv
