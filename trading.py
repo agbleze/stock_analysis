@@ -327,6 +327,9 @@ px.line(data_frame=scaeffler_df[scaeffler_df["year"].isin([2024])],
 #%%
 def get_price(data, current_year):
     prev_yr = current_year - 1
+    if prev_yr not in data.year.unique():
+        print(f"Data not available for {current_year}")
+        return 
     data = data[data["year"]==prev_yr]
     stats = data.describe()
     min_close_price = stats.loc["min"]["Close"]
@@ -338,7 +341,7 @@ def get_price(data, current_year):
     return min_close_price, exit_price
 
 #%%
-get_price(scaeffler_df, 2024)    
+get_price(scaeffler_df, 2014)    
 
 
 #%%
@@ -364,6 +367,97 @@ sca_desc = scaeffler_df.describe()
 #%%
 (105/100)*7.05
 
+#%%
+(125/100)*5.82
+
+#%%
+
+def place_order(data, current_year, investment_amount=100):
+    buy_price, exit_price = get_price(data=data, current_year=current_year)
+    # cal profit and loss for investment
+    buy_setup = False
+    sell_setup = False
+    entered_market = False
+    realized_amount = False
+    buy_date, sell_date = None, None
+    data = data.rename(columns={"Date": "_Date"})
+    monitor_data = data[data["year"]==current_year]
+    last_index = monitor_data.index[-1]
+    #print(monitor_data)
+    # monitor_data = monitor_data.sort_values(by="_Date", 
+    #                                         ascending=True,
+    #                                         inplace=True
+    #                                         )
+    for rowdata_index, rowdata in monitor_data.iterrows():
+        if buy_setup and not entered_market:
+            enter_price = rowdata["Close"]
+            # send buy order and get number of shares bought
+            number_of_shares = investment_amount/enter_price
+            entered_market = True
+            buy_date = rowdata["_Date"]
+        elif not buy_setup and not entered_market:
+            close_price = rowdata["Close"]
+            if close_price <= buy_price:
+                buy_setup = True
+            else:
+                continue
+        if entered_market:
+            sell_price = rowdata["Close"]
+            if sell_price >= exit_price:
+                # send sell order with api 
+                sell_date = rowdata["_Date"]
+                realized_amount = sell_price * number_of_shares
+                profit = realized_amount - investment_amount
+                percent_increase = (realized_amount/investment_amount) * 100
+                profit_percent = percent_increase - 100
+                return {"enter_price": enter_price,
+                        "buy_price": buy_price,
+                        "buy_date": buy_date,
+                        "sell_date": sell_date,
+                        "exit_price": exit_price,
+                        "sell_price": sell_price,
+                        "number_of_shares": number_of_shares,
+                        "profit_amount": profit,
+                        "realized_amount": realized_amount,
+                        "profit_lose_percent": profit_percent 
+                        }
+            elif last_index == rowdata_index:
+                # send sell order with api on last trade day of the year
+                sell_date = rowdata["_Date"]
+                realized_amount = sell_price * number_of_shares
+                profit = realized_amount - investment_amount
+                percent_increase = (realized_amount/investment_amount) * 100
+                profit_percent = percent_increase - 100
+                print(f"No sell condition meet. Exited on last trade day of the year")
+                return {"enter_price": enter_price,
+                        "buy_price": buy_price,
+                        "buy_date": buy_date,
+                        "sell_date": sell_date,
+                        "exit_price": exit_price,
+                        "sell_price": sell_price,
+                        "number_of_shares": number_of_shares,
+                        "profit_amount": profit,
+                        "realized_amount": realized_amount,
+                        "profit_lose_percent": profit_percent 
+                        }
+            
+            else:
+                continue
+    print(f"No trigger in {current_year}")
+                
+#%%
+
+place_order(data=scaeffler_df, current_year=2024)
+               
+
+#%%
+
+for index, r in scaeffler_df.iterrows():
+    print(index)
+    break
+#%%                
+    
+    # cal buy_price, exit and stop loss 
 
 # adaptiopn to algo
 
@@ -378,6 +472,11 @@ sca_desc = scaeffler_df.describe()
 ## adaptation 2 
 # adjust stop loss
 
+#%%
+
+scaeffler_df[scaeffler_df.year==2018]["Close"].is_monotonic_increasing
+#%%
+scaeffler_df["Close"].mon
 #%%
 (5.82/7.05)*100
 
