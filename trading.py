@@ -345,7 +345,7 @@ get_price(scaeffler_df, 2014)
 
 
 #%%
-yr = 2024
+yr = 2022
 enter_price, exit_price = get_price(scaeffler_df, yr)
 
 print(enter_price, exit_price)
@@ -371,8 +371,12 @@ sca_desc = scaeffler_df.describe()
 (125/100)*5.82
 
 #%%
-
-def place_order(data, current_year, investment_amount=100):
+'''TODO: Implement training profit where 70 0r 90% of profit is picked when 
+when profit_rate = 50% is used
+'''
+def place_order(data, current_year, investment_amount=100, profit_rate=None,
+                stop_loss=None
+                ):
     buy_price, exit_price = get_price(data=data, current_year=current_year)
     # cal profit and loss for investment
     buy_setup = False
@@ -380,6 +384,7 @@ def place_order(data, current_year, investment_amount=100):
     entered_market = False
     realized_amount = False
     buy_date, sell_date = None, None
+    enter_price = None
     data = data.rename(columns={"Date": "_Date"})
     monitor_data = data[data["year"]==current_year]
     last_index = monitor_data.index[-1]
@@ -390,10 +395,13 @@ def place_order(data, current_year, investment_amount=100):
     #                                         )
     for rowdata_index, rowdata in monitor_data.iterrows():
         if buy_setup and not entered_market:
+            # TODO.: check if current close price has reduced beyond stop_loss and exit 
             enter_price = rowdata["Close"]
             # send buy order and get number of shares bought
             number_of_shares = investment_amount/enter_price
             entered_market = True
+            if profit_rate:
+                exit_price = ((100+profit_rate)/100) * enter_price
             buy_date = rowdata["_Date"]
         elif not buy_setup and not entered_market:
             close_price = rowdata["Close"]
@@ -419,8 +427,34 @@ def place_order(data, current_year, investment_amount=100):
                         "number_of_shares": number_of_shares,
                         "profit_amount": profit,
                         "realized_amount": realized_amount,
-                        "profit_lose_percent": profit_percent 
+                        "profit_lose_percent": profit_percent,
+                        "exit_type": "profit" 
                         }
+            elif rowdata_index != last_index:
+                if stop_loss:
+                    exit_stoploss_price = ((100 - stop_loss) / 100) * enter_price
+                    if sell_price <= exit_stoploss_price:
+                        # send sell order with api 
+                        sell_date = rowdata["_Date"]
+                        realized_amount = sell_price * number_of_shares
+                        profit = realized_amount - investment_amount
+                        percent_increase = (realized_amount/investment_amount) * 100
+                        profit_percent = percent_increase - 100
+                        return {"enter_price": enter_price,
+                                "buy_price": buy_price,
+                                "buy_date": buy_date,
+                                "sell_date": sell_date,
+                                "exit_price": exit_price,
+                                "sell_price": sell_price,
+                                "number_of_shares": number_of_shares,
+                                "profit_amount": profit,
+                                "realized_amount": realized_amount,
+                                "profit_lose_percent": profit_percent,
+                                "exit_type": "stop_loss",
+                                "exit_stoploss_price": exit_stoploss_price
+                                }
+                    else:
+                        continue                    
             elif last_index == rowdata_index:
                 # send sell order with api on last trade day of the year
                 sell_date = rowdata["_Date"]
@@ -428,7 +462,7 @@ def place_order(data, current_year, investment_amount=100):
                 profit = realized_amount - investment_amount
                 percent_increase = (realized_amount/investment_amount) * 100
                 profit_percent = percent_increase - 100
-                print(f"No sell condition meet. Exited on last trade day of the year")
+                print(f"No sell condition meet. Exited on last trade day of the {current_year}")
                 return {"enter_price": enter_price,
                         "buy_price": buy_price,
                         "buy_date": buy_date,
@@ -438,7 +472,8 @@ def place_order(data, current_year, investment_amount=100):
                         "number_of_shares": number_of_shares,
                         "profit_amount": profit,
                         "realized_amount": realized_amount,
-                        "profit_lose_percent": profit_percent 
+                        "profit_lose_percent": profit_percent,
+                        "exit_type": "last_trade_day"
                         }
             
             else:
@@ -447,14 +482,253 @@ def place_order(data, current_year, investment_amount=100):
                 
 #%%
 
-place_order(data=scaeffler_df, current_year=2024)
+place_order(data=scaeffler_df, current_year=2024, stop_loss=30)
                
+
+
+#%% 
+"""
+TODO: reorganize your algo into a class that can be automatically be called
+with a ticker and it does the backtesting
+
+1 download the data of ticker
+2. backtest it
+
+"""
+
+#%%
+class YearOnYearStrategy(object):
+    def __init__(self, ticker):
+        self.ticker = ticker
+        
+    def download_data(self, ticker=None):
+        if not ticker:
+            ticker = self.ticker
+        
+        self.data = yf.download(tickers=ticker)
+        
+    def create_date_columns(self, data=None):
+        if not data:
+            data = self.data
+        data["month"] = data.index.month
+        data["day"] = data.index.day
+        data["weekday"] = data.index.weekday
+        data["day_name"] = data.index.day_name()
+        data["year"] = data.index.year
+        data["month_name"] = data.index.month_name()
+        data["Date"] = data.index.values
+        self.data = data
+        return data
+    
+    def get_price(self, current_year, data=None,):
+        if not data:
+            data = self.data
+        prev_yr = current_year - 1
+        if prev_yr not in data.year.unique():
+            print(f"Data not available for {current_year}")
+            return 
+        data = data[data["year"]==prev_yr]
+        stats = data.describe()
+        min_close_price = stats.loc["min"]["Close"]
+        close_price_75per = stats.loc["75%"]["Close"]
+        new_price = (close_price_75per/min_close_price) * 100 
+        percent_diff = new_price - 100
+        percent_to_add = (50/100) * percent_diff
+        exit_price = ((100 + percent_to_add) /100) * min_close_price
+        return min_close_price, exit_price
+    
+    def place_order(self, data, current_year, 
+                    investment_amount=100, 
+                    profit_rate=None,
+                    stop_loss=None
+                    ):
+        if not data:
+            data = self.data
+        buy_price, exit_price = get_price(data=data, current_year=current_year)
+        # cal profit and loss for investment
+        buy_setup = False
+        sell_setup = False
+        entered_market = False
+        realized_amount = False
+        buy_date, sell_date = None, None
+        enter_price = None
+        data = data.rename(columns={"Date": "_Date"})
+        monitor_data = data[data["year"]==current_year]
+        last_index = monitor_data.index[-1]
+        for rowdata_index, rowdata in monitor_data.iterrows():
+            if buy_setup and not entered_market:
+                # TODO.: check if current close price has reduced beyond stop_loss and exit 
+                enter_price = rowdata["Close"]
+                # send buy order and get number of shares bought
+                number_of_shares = investment_amount/enter_price
+                entered_market = True
+                if profit_rate:
+                    exit_price = ((100+profit_rate)/100) * enter_price
+                buy_date = rowdata["_Date"]
+            elif not buy_setup and not entered_market:
+                close_price = rowdata["Close"]
+                if close_price <= buy_price:
+                    buy_setup = True
+                else:
+                    continue
+            if entered_market:
+                sell_price = rowdata["Close"]
+                if sell_price >= exit_price:
+                    # send sell order with api 
+                    sell_date = rowdata["_Date"]
+                    realized_amount = sell_price * number_of_shares
+                    profit = realized_amount - investment_amount
+                    percent_increase = (realized_amount/investment_amount) * 100
+                    profit_percent = percent_increase - 100
+                    return {"enter_price": enter_price,
+                            "buy_price": buy_price,
+                            "buy_date": buy_date,
+                            "sell_date": sell_date,
+                            "exit_price": exit_price,
+                            "sell_price": sell_price,
+                            "number_of_shares": number_of_shares,
+                            "profit_amount": profit,
+                            "realized_amount": realized_amount,
+                            "profit_lose_percent": profit_percent,
+                            "exit_type": "profit" 
+                            }
+                elif rowdata_index != last_index:
+                    if stop_loss:
+                        exit_stoploss_price = ((100 - stop_loss) / 100) * enter_price
+                        if sell_price <= exit_stoploss_price:
+                            # send sell order with api 
+                            sell_date = rowdata["_Date"]
+                            realized_amount = sell_price * number_of_shares
+                            profit = realized_amount - investment_amount
+                            percent_increase = (realized_amount/investment_amount) * 100
+                            profit_percent = percent_increase - 100
+                            return {"enter_price": enter_price,
+                                    "buy_price": buy_price,
+                                    "buy_date": buy_date,
+                                    "sell_date": sell_date,
+                                    "exit_price": exit_price,
+                                    "sell_price": sell_price,
+                                    "number_of_shares": number_of_shares,
+                                    "profit_amount": profit,
+                                    "realized_amount": realized_amount,
+                                    "profit_lose_percent": profit_percent,
+                                    "exit_type": "stop_loss",
+                                    "exit_stoploss_price": exit_stoploss_price
+                                    }
+                        else:
+                            continue                    
+                elif last_index == rowdata_index:
+                    # send sell order with api on last trade day of the year
+                    sell_date = rowdata["_Date"]
+                    realized_amount = sell_price * number_of_shares
+                    profit = realized_amount - investment_amount
+                    percent_increase = (realized_amount/investment_amount) * 100
+                    profit_percent = percent_increase - 100
+                    print(f"No sell condition meet. Exited on last trade day of the {current_year}")
+                    return {"enter_price": enter_price,
+                            "buy_price": buy_price,
+                            "buy_date": buy_date,
+                            "sell_date": sell_date,
+                            "exit_price": exit_price,
+                            "sell_price": sell_price,
+                            "number_of_shares": number_of_shares,
+                            "profit_amount": profit,
+                            "realized_amount": realized_amount,
+                            "profit_lose_percent": profit_percent,
+                            "exit_type": "last_trade_day"
+                            }
+                
+                else:
+                    continue
+        print(f"No trigger in {current_year}")
+    def backtest(self):
+        pass                
+
+
+#%%
+"""
+Implemented strategy 
+1. previous year min for buy and sell at 75% percentile + 50% of diff b/t 75% and min
+
+1. get the descriptive statistics of the immediate previous year of year to invest in
+This is based on the assumption that near years are more related and previous lows and highs 
+are likely to repeat immediately
+
+
+
+
+
+"""
+
 
 #%%
 
 for index, r in scaeffler_df.iterrows():
     print(index)
     break
+
+
+#%%
+
+backtested_results = [place_order(data=scaeffler_df, current_year=yr, 
+                                  investment_amount=1000,
+                                  profit_rate=5,
+                                  stop_loss=None
+                                  ) 
+                      for yr in range(2016, 2024)
+                      ]
+
+total_invested = 0
+realized_amount = 0
+for res in backtested_results:
+    if isinstance(res, dict):
+        total_invested += 1000
+        realized_amt = res["realized_amount"]
+        realized_amount += realized_amt
+
+print(f"total_invested: {total_invested}")
+print(f"realized_amount: {realized_amount}")
+(realized_amount/total_invested)*100
+
+
+[print(res) for res in backtested_results]
+#%%
+"""
+The backtest results shows the best return is achieved by 
+setting profit rate of 50% and stop loss of 30%. This 
+produces 15.6% profit after backtest period. The only time 
+50%+ profit was hit only once in an investment round and all 
+other trades exited on the last trade day of the year
+
+A lost of 30.4% was incurred once during the trading period for a year.
+least profit was 5.9% 
+
+2 years in the trading period did not trigger a trade
+
+
+####  using 5% profit rate with 30% stop_loss or no stop loss
+100% win rate is achieved with this but with only 6% profit
+
+No trade went into last day of trading. There was no trigger in 2 years 
+of the backtest periods
+
+"""
+
+#%% TODO
+"""
+Determine where and in which months the lowest price is found and highest 
+and use that to improve the trading strategy
+"""
+
+
+#%%
+px.line(data_frame=scaeffler_df, 
+        y="Close",
+        template="plotly_dark"
+        )
+
+#%%
+
 #%%                
     
     # cal buy_price, exit and stop loss 
