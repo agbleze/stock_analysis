@@ -544,7 +544,7 @@ class YearOnYearStrategy(object):
                     ):
         if not data:
             data = self.data
-        buy_price, exit_price = get_price(data=data, current_year=current_year)
+        buy_price, exit_price = self.get_price(data=data, current_year=current_year)
         # cal profit and loss for investment
         buy_setup = False
         sell_setup = False
@@ -641,8 +641,13 @@ class YearOnYearStrategy(object):
                 else:
                     continue
         print(f"No trigger in {current_year}")
-    def backtest(self):
-        pass                
+    def backtest(self, data):
+        if not data:
+            if hasattr(self, "data"):
+                data = self.data
+            else:
+                self.download(ticker=self.ticker)
+                            
 
 
 #%%
