@@ -677,16 +677,44 @@ backtested_results
 # for TSLA; NVDA, KO increasing the duration of investment eliminates some losses
 
 #%%
-ticker = "KO"
+ticker = "IFX.DE"
 
 stra_tester = YearOnYearStrategy(ticker=ticker)
-backtested_results = stra_tester.backtest(profit_rate=None) 
+backtested_results = stra_tester.backtest(profit_rate=None, stop_loss=None) 
 print(ticker)
 backtested_results 
- 
+
+
+#%%  #  AT&T  -- tuning duration can eliminate some losses
+ticker = "T"
+
+stra_tester = YearOnYearStrategy(ticker=ticker)
+backtested_results = stra_tester.backtest(profit_rate=None, stop_loss=None) 
+print(ticker)
+backtested_results 
+
+
+#%%
+#%%  #  verizon communication
+ticker = "VZ"
+
+stra_tester = YearOnYearStrategy(ticker=ticker)
+backtested_results = stra_tester.backtest(profit_rate=None, stop_loss=None) 
+print(ticker)
+backtested_results 
+
+
+#%%  #  META
+ticker = "FMS"
+
+stra_tester = YearOnYearStrategy(ticker=ticker)
+backtested_results = stra_tester.backtest(profit_rate=None, stop_loss=30) 
+print(ticker)
+backtested_results 
 #%%    
 total_invested = 0
 realized_amount = 0
+investment_amount = 100
 for res in backtested_results:
     if isinstance(res, dict):
         total_invested += investment_amount
@@ -696,9 +724,38 @@ for res in backtested_results:
 [print(res) for res in backtested_results]
 
         
-                            
+print(f"Total invested: {total_invested}")
+print(f"Total realized amount: {realized_amount}")                            
 
 
+#%%
+
+((realized_amount/total_invested)) * 100
+
+
+#%% TODO: add accumulated investment approach where output of inital investment is used for next investment
+
+"""
+
+Rio tINCO -- set stop_loss to 20% and profit rate to None to get 11% profit 
+on back test is the best.
+
+Novo Nodick made 3% profit on default back test
+
+PUMA made 8% profit on default back test and shows trend of loss a year before profit
+
+Addeso made 15% loss on default back test and shows trend of losses in recent years.
+It has the potential of lossing as much as 70% on a trade. Setting stop_loss of 10%
+creates 21% profit on back test.
+
+
+Siement makes 3.6% profit on default back test and 3.9% profit on 
+on stop_loss of 30%
+
+Allianz is unprofitable with default back test 
+"""
+
+#
 #%%
 """
 Implemented strategy 
