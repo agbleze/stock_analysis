@@ -202,7 +202,7 @@ for yr in nvidia_data.year.unique():
 
 #%%
 # schaeffler
-ticker = "SHA.DE"
+ticker = "SHA"
 
 scaeffler_df = yf.download(tickers=ticker)
 
@@ -508,7 +508,7 @@ class YearOnYearStrategy(object):
         self.data = yf.download(tickers=ticker)
         
     def create_date_columns(self, data=None):
-        if not data:
+        if data is None:
             data = self.data
         data["month"] = data.index.month
         data["day"] = data.index.day
@@ -521,7 +521,7 @@ class YearOnYearStrategy(object):
         return data
     
     def get_price(self, current_year, data=None,):
-        if not data:
+        if data is None:
             data = self.data
         prev_yr = current_year - 1
         if prev_yr not in data.year.unique():
@@ -542,7 +542,7 @@ class YearOnYearStrategy(object):
                     profit_rate=None,
                     stop_loss=None
                     ):
-        if not data:
+        if data is None:
             data = self.data
         buy_price, exit_price = self.get_price(data=data, current_year=current_year)
         # cal profit and loss for investment
@@ -641,12 +641,61 @@ class YearOnYearStrategy(object):
                 else:
                     continue
         print(f"No trigger in {current_year}")
-    def backtest(self, data):
-        if not data:
+    def backtest(self, data: pd.DataFrame = None, 
+                 investment_amount: int = 100, 
+                profit_rate=None,
+                stop_loss=None
+                ):
+        if data is None:
             if hasattr(self, "data"):
                 data = self.data
             else:
-                self.download(ticker=self.ticker)
+                data = self.download_data(ticker=self.ticker)
+        
+        data = self.create_date_columns(data=data)
+        years = data.sort_values(by="year")["year"].unique()
+        backtested_results = [self.place_order(data=data, current_year=yr, 
+                                                investment_amount=investment_amount,
+                                                profit_rate=profit_rate,
+                                                stop_loss=stop_loss
+                                                ) 
+                                for yr in years[1:]
+                            ]
+        return backtested_results
+
+#%%
+ticker = "TSLA"
+
+stra_tester = YearOnYearStrategy(ticker=ticker)    
+   
+   
+#%% TODO: tune duration of investment. change from 1 year to 18 months
+# chnage duration of investment to 1 year from buying date
+backtested_results = stra_tester.backtest() 
+backtested_results  
+
+# for TSLA; NVDA, KO increasing the duration of investment eliminates some losses
+
+#%%
+ticker = "KO"
+
+stra_tester = YearOnYearStrategy(ticker=ticker)
+backtested_results = stra_tester.backtest(profit_rate=None) 
+print(ticker)
+backtested_results 
+ 
+#%%    
+total_invested = 0
+realized_amount = 0
+for res in backtested_results:
+    if isinstance(res, dict):
+        total_invested += investment_amount
+        realized_amt = res["realized_amount"]
+        realized_amount += realized_amt
+
+[print(res) for res in backtested_results]
+
+        
                             
 
 
