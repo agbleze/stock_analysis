@@ -590,7 +590,8 @@ class YearOnYearStrategy(object):
                             "profit_amount": profit,
                             "realized_amount": realized_amount,
                             "profit_lose_percent": profit_percent,
-                            "exit_type": "profit" 
+                            "exit_type": "profit",
+                            "investment_amount": investment_amount
                             }
                 elif rowdata_index != last_index:
                     if stop_loss:
@@ -613,7 +614,8 @@ class YearOnYearStrategy(object):
                                     "realized_amount": realized_amount,
                                     "profit_lose_percent": profit_percent,
                                     "exit_type": "stop_loss",
-                                    "exit_stoploss_price": exit_stoploss_price
+                                    "exit_stoploss_price": exit_stoploss_price,
+                                    "investment_amount": investment_amount
                                     }
                         else:
                             continue                    
@@ -635,7 +637,8 @@ class YearOnYearStrategy(object):
                             "profit_amount": profit,
                             "realized_amount": realized_amount,
                             "profit_lose_percent": profit_percent,
-                            "exit_type": "last_trade_day"
+                            "exit_type": "last_trade_day",
+                            "investment_amount": investment_amount
                             }
                 
                 else:
@@ -645,7 +648,7 @@ class YearOnYearStrategy(object):
                  investment_amount: int = 100, 
                 profit_rate=None,
                 stop_loss=None, 
-                accumulated_investment: bool = True
+                accumulated_investment: bool = False
                 ):
         if data is None:
             if hasattr(self, "data"):
@@ -655,13 +658,28 @@ class YearOnYearStrategy(object):
         
         data = self.create_date_columns(data=data)
         years = data.sort_values(by="year")["year"].unique()
-        backtested_results = [self.place_order(data=data, current_year=yr, 
-                                                investment_amount=investment_amount,
-                                                profit_rate=profit_rate,
-                                                stop_loss=stop_loss
-                                                ) 
-                                for yr in years[1:]
-                            ]
+        if not accumulated_investment:
+            backtested_results = [self.place_order(data=data, current_year=yr, 
+                                                    investment_amount=investment_amount,
+                                                    profit_rate=profit_rate,
+                                                    stop_loss=stop_loss
+                                                    ) 
+                                    for yr in years[1:]
+                                ]
+        else:
+            realized_amount = investment_amount
+            backtested_results = []
+            for yr in years[1:]:
+                res = self.place_order(data=data, 
+                                        current_year=yr,
+                                        investment_amount=realized_amount,
+                                        profit_rate=profit_rate,
+                                        stop_loss=stop_loss
+                                        )
+                if isinstance(res, dict):
+                    realized_amount = res["realized_amount"]
+                    res["accumulated_investment"] = True
+                backtested_results.append(res)
         return backtested_results
 
 #%%
@@ -672,7 +690,10 @@ stra_tester = YearOnYearStrategy(ticker=ticker)
    
 #%% TODO: tune duration of investment. change from 1 year to 18 months
 # chnage duration of investment to 1 year from buying date
-backtested_results = stra_tester.backtest() 
+backtested_results = stra_tester.backtest(accumulated_investment=True, 
+                                          profit_rate=None, 
+                                          stop_loss=None
+                                          ) 
 backtested_results  
 
 # for TSLA; NVDA, KO increasing the duration of investment eliminates some losses
@@ -765,10 +786,6 @@ Implemented strategy
 1. get the descriptive statistics of the immediate previous year of year to invest in
 This is based on the assumption that near years are more related and previous lows and highs 
 are likely to repeat immediately
-
-
-
-
 
 """
 
