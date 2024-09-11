@@ -644,7 +644,8 @@ class YearOnYearStrategy(object):
     def backtest(self, data: pd.DataFrame = None, 
                  investment_amount: int = 100, 
                 profit_rate=None,
-                stop_loss=None
+                stop_loss=None, 
+                accumulated_investment: bool = True
                 ):
         if data is None:
             if hasattr(self, "data"):
