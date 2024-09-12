@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
-
+from pandas.tseries.offsets import DateOffset
 #%%
 
 # Download historical data for "WEAT" (Wheat ETF) from Yahoo Finance
@@ -540,7 +540,8 @@ class YearOnYearStrategy(object):
     def place_order(self, data, current_year, 
                     investment_amount=100, 
                     profit_rate=None,
-                    stop_loss=None
+                    stop_loss=None,
+                    monitor_duration=None,
                     ):
         if data is None:
             data = self.data
@@ -555,9 +556,10 @@ class YearOnYearStrategy(object):
         data = data.rename(columns={"Date": "_Date"})
         monitor_data = data[data["year"]==current_year]
         last_index = monitor_data.index[-1]
+        monitor_duration_data = None
         for rowdata_index, rowdata in monitor_data.iterrows():
             if buy_setup and not entered_market:
-                # TODO.: check if current close price has reduced beyond stop_loss and exit 
+                # TODO: check if current close price has reduced beyond stop_loss and exit 
                 enter_price = rowdata["Close"]
                 # send buy order and get number of shares bought
                 number_of_shares = investment_amount/enter_price
@@ -565,6 +567,12 @@ class YearOnYearStrategy(object):
                 if profit_rate:
                     exit_price = ((100+profit_rate)/100) * enter_price
                 buy_date = rowdata["_Date"]
+                if monitor_duration:
+                    monitor_datelimit = buy_date + DateOffset(months=monitor_duration)
+                    monitor_duration_data = data[(data["_Date"] > buy_date) & (data["_Date"]<=monitor_datelimit)]
+                    print(f"buy date: {buy_date}")
+                    print(f"monitor_datelimit: {monitor_datelimit}")
+                    print(f"monitor_data. {monitor_data}")
             elif not buy_setup and not entered_market:
                 close_price = rowdata["Close"]
                 if close_price <= buy_price:
@@ -572,31 +580,83 @@ class YearOnYearStrategy(object):
                 else:
                     continue
             if entered_market:
-                sell_price = rowdata["Close"]
-                if sell_price >= exit_price:
-                    # send sell order with api 
-                    sell_date = rowdata["_Date"]
-                    realized_amount = sell_price * number_of_shares
-                    profit = realized_amount - investment_amount
-                    percent_increase = (realized_amount/investment_amount) * 100
-                    profit_percent = percent_increase - 100
-                    return {"enter_price": enter_price,
-                            "buy_price": buy_price,
-                            "buy_date": buy_date,
-                            "sell_date": sell_date,
-                            "exit_price": exit_price,
-                            "sell_price": sell_price,
-                            "number_of_shares": number_of_shares,
-                            "profit_amount": profit,
-                            "realized_amount": realized_amount,
-                            "profit_lose_percent": profit_percent,
-                            "exit_type": "profit",
-                            "investment_amount": investment_amount
-                            }
-                elif rowdata_index != last_index:
-                    if stop_loss:
-                        exit_stoploss_price = ((100 - stop_loss) / 100) * enter_price
-                        if sell_price <= exit_stoploss_price:
+                if not monitor_duration:
+                    sell_price = rowdata["Close"]
+                    if sell_price >= exit_price:
+                        # send sell order with api 
+                        sell_date = rowdata["_Date"]
+                        realized_amount = sell_price * number_of_shares
+                        profit = realized_amount - investment_amount
+                        percent_increase = (realized_amount/investment_amount) * 100
+                        profit_percent = percent_increase - 100
+                        return {"enter_price": enter_price,
+                                "buy_price": buy_price,
+                                "buy_date": buy_date,
+                                "sell_date": sell_date,
+                                "exit_price": exit_price,
+                                "sell_price": sell_price,
+                                "number_of_shares": number_of_shares,
+                                "profit_amount": profit,
+                                "realized_amount": realized_amount,
+                                "profit_lose_percent": profit_percent,
+                                "exit_type": "profit",
+                                "investment_amount": investment_amount
+                                }
+                    elif rowdata_index != last_index:
+                        if stop_loss:
+                            exit_stoploss_price = ((100 - stop_loss) / 100) * enter_price
+                            if sell_price <= exit_stoploss_price:
+                                # send sell order with api 
+                                sell_date = rowdata["_Date"]
+                                realized_amount = sell_price * number_of_shares
+                                profit = realized_amount - investment_amount
+                                percent_increase = (realized_amount/investment_amount) * 100
+                                profit_percent = percent_increase - 100
+                                return {"enter_price": enter_price,
+                                        "buy_price": buy_price,
+                                        "buy_date": buy_date,
+                                        "sell_date": sell_date,
+                                        "exit_price": exit_price,
+                                        "sell_price": sell_price,
+                                        "number_of_shares": number_of_shares,
+                                        "profit_amount": profit,
+                                        "realized_amount": realized_amount,
+                                        "profit_lose_percent": profit_percent,
+                                        "exit_type": "stop_loss",
+                                        "exit_stoploss_price": exit_stoploss_price,
+                                        "investment_amount": investment_amount
+                                        }
+                            else:
+                                continue                    
+                    elif last_index == rowdata_index:
+                        # send sell order with api on last trade day of the year
+                        sell_date = rowdata["_Date"]
+                        realized_amount = sell_price * number_of_shares
+                        profit = realized_amount - investment_amount
+                        percent_increase = (realized_amount/investment_amount) * 100
+                        profit_percent = percent_increase - 100
+                        print(f"No sell condition meet. Exited on last trade day of the {current_year}")
+                        return {"enter_price": enter_price,
+                                "buy_price": buy_price,
+                                "buy_date": buy_date,
+                                "sell_date": sell_date,
+                                "exit_price": exit_price,
+                                "sell_price": sell_price,
+                                "number_of_shares": number_of_shares,
+                                "profit_amount": profit,
+                                "realized_amount": realized_amount,
+                                "profit_lose_percent": profit_percent,
+                                "exit_type": "last_trade_day",
+                                "investment_amount": investment_amount
+                                }
+                    
+                    else:
+                        continue
+                else:
+                    last_index = monitor_duration_data.index[-1]
+                    for rowdata_index, rowdata in monitor_duration_data.iterrows():
+                        sell_price = rowdata["Close"]
+                        if sell_price >= exit_price:
                             # send sell order with api 
                             sell_date = rowdata["_Date"]
                             realized_amount = sell_price * number_of_shares
@@ -613,42 +673,69 @@ class YearOnYearStrategy(object):
                                     "profit_amount": profit,
                                     "realized_amount": realized_amount,
                                     "profit_lose_percent": profit_percent,
-                                    "exit_type": "stop_loss",
-                                    "exit_stoploss_price": exit_stoploss_price,
-                                    "investment_amount": investment_amount
+                                    "exit_type": "profit",
+                                    "investment_amount": investment_amount,
+                                    "investment_duration": monitor_duration
                                     }
+                        elif rowdata_index != last_index:
+                            if stop_loss:
+                                exit_stoploss_price = ((100 - stop_loss) / 100) * enter_price
+                                if sell_price <= exit_stoploss_price:
+                                    # send sell order with api 
+                                    sell_date = rowdata["_Date"]
+                                    realized_amount = sell_price * number_of_shares
+                                    profit = realized_amount - investment_amount
+                                    percent_increase = (realized_amount/investment_amount) * 100
+                                    profit_percent = percent_increase - 100
+                                    return {"enter_price": enter_price,
+                                            "buy_price": buy_price,
+                                            "buy_date": buy_date,
+                                            "sell_date": sell_date,
+                                            "exit_price": exit_price,
+                                            "sell_price": sell_price,
+                                            "number_of_shares": number_of_shares,
+                                            "profit_amount": profit,
+                                            "realized_amount": realized_amount,
+                                            "profit_lose_percent": profit_percent,
+                                            "exit_type": "stop_loss",
+                                            "exit_stoploss_price": exit_stoploss_price,
+                                            "investment_amount": investment_amount,
+                                            "investment_duration": monitor_duration
+                                            }
+                                else:
+                                    continue                    
+                        elif last_index == rowdata_index:
+                            # send sell order with api on last trade day of the year
+                            sell_date = rowdata["_Date"]
+                            realized_amount = sell_price * number_of_shares
+                            profit = realized_amount - investment_amount
+                            percent_increase = (realized_amount/investment_amount) * 100
+                            profit_percent = percent_increase - 100
+                            print(f"No sell condition meet. Exited on last trade day of the {current_year}")
+                            return {"enter_price": enter_price,
+                                    "buy_price": buy_price,
+                                    "buy_date": buy_date,
+                                    "sell_date": sell_date,
+                                    "exit_price": exit_price,
+                                    "sell_price": sell_price,
+                                    "number_of_shares": number_of_shares,
+                                    "profit_amount": profit,
+                                    "realized_amount": realized_amount,
+                                    "profit_lose_percent": profit_percent,
+                                    "exit_type": "last_trade_day",
+                                    "investment_amount": investment_amount,
+                                    "investment_duration": monitor_duration
+                                    }
+                        
                         else:
-                            continue                    
-                elif last_index == rowdata_index:
-                    # send sell order with api on last trade day of the year
-                    sell_date = rowdata["_Date"]
-                    realized_amount = sell_price * number_of_shares
-                    profit = realized_amount - investment_amount
-                    percent_increase = (realized_amount/investment_amount) * 100
-                    profit_percent = percent_increase - 100
-                    print(f"No sell condition meet. Exited on last trade day of the {current_year}")
-                    return {"enter_price": enter_price,
-                            "buy_price": buy_price,
-                            "buy_date": buy_date,
-                            "sell_date": sell_date,
-                            "exit_price": exit_price,
-                            "sell_price": sell_price,
-                            "number_of_shares": number_of_shares,
-                            "profit_amount": profit,
-                            "realized_amount": realized_amount,
-                            "profit_lose_percent": profit_percent,
-                            "exit_type": "last_trade_day",
-                            "investment_amount": investment_amount
-                            }
-                
-                else:
-                    continue
+                            continue          
         print(f"No trigger in {current_year}")
     def backtest(self, data: pd.DataFrame = None, 
                  investment_amount: int = 100, 
                 profit_rate=None,
                 stop_loss=None, 
-                accumulated_investment: bool = False
+                accumulated_investment: bool = False,
+                monitor_duration=None,
                 ):
         if data is None:
             if hasattr(self, "data"):
@@ -662,7 +749,8 @@ class YearOnYearStrategy(object):
             backtested_results = [self.place_order(data=data, current_year=yr, 
                                                     investment_amount=investment_amount,
                                                     profit_rate=profit_rate,
-                                                    stop_loss=stop_loss
+                                                    stop_loss=stop_loss,
+                                                    monitor_duration=monitor_duration,
                                                     ) 
                                     for yr in years[1:]
                                 ]
@@ -674,7 +762,8 @@ class YearOnYearStrategy(object):
                                         current_year=yr,
                                         investment_amount=realized_amount,
                                         profit_rate=profit_rate,
-                                        stop_loss=stop_loss
+                                        stop_loss=stop_loss, 
+                                        monitor_duration=monitor_duration,
                                         )
                 if isinstance(res, dict):
                     realized_amount = res["realized_amount"]
@@ -692,10 +781,14 @@ stra_tester = YearOnYearStrategy(ticker=ticker)
 # chnage duration of investment to 1 year from buying date
 backtested_results = stra_tester.backtest(accumulated_investment=True, 
                                           profit_rate=None, 
-                                          stop_loss=None
+                                          stop_loss=None,
+                                          monitor_duration=18
                                           ) 
 backtested_results  
 
+#%%
+
+#stra_tester.data["Date"] + DateOffset(months=18)
 # for TSLA; NVDA, KO increasing the duration of investment eliminates some losses
 
 #%%
@@ -755,8 +848,7 @@ print(f"Total realized amount: {realized_amount}")
 ((realized_amount/total_invested)) * 100
 
 
-#%% TODO: add accumulated investment approach where output of inital investment is used for next investment
-
+#%% 
 """
 
 Rio tINCO -- set stop_loss to 20% and profit rate to None to get 11% profit 
@@ -962,3 +1054,23 @@ px.line(data_frame=scaeffler_df, y="Close", facet_col_wrap="year",
 #### collect data
 # visualize the stock price and save as images. For the
 # training data, indicate enter arrows 
+
+#%%
+
+import pandas as pd
+from pandas.tseries.offsets import DateOffset
+
+# Sample DataFrame
+data = {'date_column': ['2023-01-01', '2023-02-15', '2023-03-20']}
+df = pd.DataFrame(data)
+df['date_column'] = pd.to_datetime(df['date_column'])
+
+# Add months
+months_to_add = 3  # Change this value to the number of months you want to add
+df['new_date_column'] = df['date_column'] + DateOffset(months=months_to_add)
+
+# View the updated DataFrame
+print(df)
+
+
+# %%
