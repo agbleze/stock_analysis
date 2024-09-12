@@ -570,9 +570,9 @@ class YearOnYearStrategy(object):
                 if monitor_duration:
                     monitor_datelimit = buy_date + DateOffset(months=monitor_duration)
                     monitor_duration_data = data[(data["_Date"] > buy_date) & (data["_Date"]<=monitor_datelimit)]
-                    print(f"buy date: {buy_date}")
-                    print(f"monitor_datelimit: {monitor_datelimit}")
-                    print(f"monitor_data. {monitor_data}")
+                    #print(f"buy date: {buy_date}")
+                    #print(f"monitor_datelimit: {monitor_datelimit}")
+                    #print(f"monitor_data. {monitor_data}")
             elif not buy_setup and not entered_market:
                 close_price = rowdata["Close"]
                 if close_price <= buy_price:
@@ -675,7 +675,7 @@ class YearOnYearStrategy(object):
                                     "profit_lose_percent": profit_percent,
                                     "exit_type": "profit",
                                     "investment_amount": investment_amount,
-                                    "investment_duration": monitor_duration
+                                    "monitor_duration": monitor_duration
                                     }
                         elif rowdata_index != last_index:
                             if stop_loss:
@@ -700,7 +700,7 @@ class YearOnYearStrategy(object):
                                             "exit_type": "stop_loss",
                                             "exit_stoploss_price": exit_stoploss_price,
                                             "investment_amount": investment_amount,
-                                            "investment_duration": monitor_duration
+                                            "monitor_duration": monitor_duration
                                             }
                                 else:
                                     continue                    
@@ -724,7 +724,7 @@ class YearOnYearStrategy(object):
                                     "profit_lose_percent": profit_percent,
                                     "exit_type": "last_trade_day",
                                     "investment_amount": investment_amount,
-                                    "investment_duration": monitor_duration
+                                    "monitor_duration": monitor_duration
                                     }
                         
                         else:
@@ -795,7 +795,10 @@ backtested_results
 ticker = "IFX.DE"
 
 stra_tester = YearOnYearStrategy(ticker=ticker)
-backtested_results = stra_tester.backtest(profit_rate=None, stop_loss=None) 
+backtested_results = stra_tester.backtest(profit_rate=None, stop_loss=None,
+                                          accumulated_investment=True, 
+                                          monitor_duration=18
+                                          ) 
 print(ticker)
 backtested_results 
 
@@ -804,7 +807,10 @@ backtested_results
 ticker = "T"
 
 stra_tester = YearOnYearStrategy(ticker=ticker)
-backtested_results = stra_tester.backtest(profit_rate=None, stop_loss=None) 
+backtested_results = stra_tester.backtest(profit_rate=None, stop_loss=None,
+                                          accumulated_investment=True, 
+                                          monitor_duration=18
+                                          ) 
 print(ticker)
 backtested_results 
 
@@ -814,16 +820,24 @@ backtested_results
 ticker = "VZ"
 
 stra_tester = YearOnYearStrategy(ticker=ticker)
-backtested_results = stra_tester.backtest(profit_rate=None, stop_loss=None) 
+backtested_results = stra_tester.backtest(profit_rate=None, 
+                                          stop_loss=None,
+                                          accumulated_investment=True, 
+                                          monitor_duration=18
+                                          ) 
 print(ticker)
 backtested_results 
 
 
 #%%  #  META
-ticker = "FMS"
+ticker = "INTC"
 
 stra_tester = YearOnYearStrategy(ticker=ticker)
-backtested_results = stra_tester.backtest(profit_rate=None, stop_loss=30) 
+backtested_results = stra_tester.backtest(profit_rate=None, 
+                                          stop_loss=None,
+                                          accumulated_investment=True, 
+                                          monitor_duration=18
+                                          ) 
 print(ticker)
 backtested_results 
 #%%    
