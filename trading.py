@@ -202,7 +202,7 @@ for yr in nvidia_data.year.unique():
 
 #%%
 # schaeffler
-ticker = "SHA"
+ticker = "SHA.DE"
 
 scaeffler_df = yf.download(tickers=ticker)
 
@@ -600,7 +600,8 @@ class YearOnYearStrategy(object):
                                 "realized_amount": realized_amount,
                                 "profit_lose_percent": profit_percent,
                                 "exit_type": "profit",
-                                "investment_amount": investment_amount
+                                "investment_amount": investment_amount,
+                                "trade_duration": sell_date - buy_date
                                 }
                     elif rowdata_index != last_index:
                         if stop_loss:
@@ -624,7 +625,8 @@ class YearOnYearStrategy(object):
                                         "profit_lose_percent": profit_percent,
                                         "exit_type": "stop_loss",
                                         "exit_stoploss_price": exit_stoploss_price,
-                                        "investment_amount": investment_amount
+                                        "investment_amount": investment_amount,
+                                        "trade_duration": sell_date - buy_date
                                         }
                             else:
                                 continue                    
@@ -647,7 +649,8 @@ class YearOnYearStrategy(object):
                                 "realized_amount": realized_amount,
                                 "profit_lose_percent": profit_percent,
                                 "exit_type": "last_trade_day",
-                                "investment_amount": investment_amount
+                                "investment_amount": investment_amount,
+                                "trade_duration": sell_date - buy_date
                                 }
                     
                     else:
@@ -675,7 +678,8 @@ class YearOnYearStrategy(object):
                                     "profit_lose_percent": profit_percent,
                                     "exit_type": "profit",
                                     "investment_amount": investment_amount,
-                                    "monitor_duration": monitor_duration
+                                    "monitor_duration": monitor_duration,
+                                    "trade_duration": sell_date - buy_date
                                     }
                         elif rowdata_index != last_index:
                             if stop_loss:
@@ -700,7 +704,8 @@ class YearOnYearStrategy(object):
                                             "exit_type": "stop_loss",
                                             "exit_stoploss_price": exit_stoploss_price,
                                             "investment_amount": investment_amount,
-                                            "monitor_duration": monitor_duration
+                                            "monitor_duration": monitor_duration,
+                                            "trade_duration": sell_date - buy_date
                                             }
                                 else:
                                     continue                    
@@ -724,7 +729,8 @@ class YearOnYearStrategy(object):
                                     "profit_lose_percent": profit_percent,
                                     "exit_type": "last_trade_day",
                                     "investment_amount": investment_amount,
-                                    "monitor_duration": monitor_duration
+                                    "monitor_duration": monitor_duration,
+                                    "trade_duration": sell_date - buy_date
                                     }
                         
                         else:
@@ -831,6 +837,8 @@ backtested_results
 
 #%%  #  META
 ticker = "INTC"
+# schaeffler
+ticker = "SHA.DE"
 
 stra_tester = YearOnYearStrategy(ticker=ticker)
 backtested_results = stra_tester.backtest(profit_rate=None, 
@@ -840,6 +848,10 @@ backtested_results = stra_tester.backtest(profit_rate=None,
                                           ) 
 print(ticker)
 backtested_results 
+
+#%%
+
+stra_tester.data.index[0] - stra_tester.data.index[1]
 #%%    
 total_invested = 0
 realized_amount = 0
