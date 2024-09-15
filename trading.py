@@ -840,9 +840,10 @@ ticker = "INTC"
 # schaeffler
 ticker = "SHA.DE"
 
+ticker = "LHA.DE"
 stra_tester = YearOnYearStrategy(ticker=ticker)
 backtested_results = stra_tester.backtest(profit_rate=None, 
-                                          stop_loss=None,
+                                          stop_loss=30,
                                           accumulated_investment=True, 
                                           monitor_duration=18
                                           ) 
@@ -1099,4 +1100,4 @@ df['new_date_column'] = df['date_column'] + DateOffset(months=months_to_add)
 print(df)
 
 
-# %%
+# %%  TODO: time series forecasting and decompostion of stocks
