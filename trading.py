@@ -968,6 +968,37 @@ Determine where and in which months the lowest price is found and highest
 and use that to improve the trading strategy
 """
 
+#%%
+# %%  TODO: time series forecasting and decompostion of stocks<
+import pandas as pd
+import numpy as np
+import datetime
+import matplotlib.pyplot as plt
+import seaborn as sns
+import plotly.express as px
+from prophet import Prophet
+from prophet.plot import plot_seasonality
+from prophet.plot import add_changepoints_to_plot
+from prophet.diagnostics import cross_validation
+from prophet.diagnostics import performance_metrics
+from prophet.plot import plot_cross_validation_metric
+import numpy as np
+import itertools
+from prophet.serialize import model_to_json, model_from_json
+import json
+import tensorflow as tf
+from sklearn import preprocessing
+from sklearn import metrics
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import (Bidirectional, LSTM, Flatten,
+                                     TimeDistributed, RepeatVector,
+                                     Conv1D, MaxPool1D)
+from keras.layers import LSTM, Dense, Bidirectional, MaxPool1D, Dropout
+
+
+
+
+
 
 #%%
 px.line(data_frame=scaeffler_df, 
@@ -1100,4 +1131,4 @@ df['new_date_column'] = df['date_column'] + DateOffset(months=months_to_add)
 print(df)
 
 
-# %%  TODO: time series forecasting and decompostion of stocks
+
