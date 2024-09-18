@@ -6,6 +6,31 @@ import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
 from pandas.tseries.offsets import DateOffset
+import pandas as pd
+import numpy as np
+import datetime
+import matplotlib.pyplot as plt
+import seaborn as sns
+import plotly.express as px
+from prophet import Prophet
+from prophet.plot import plot_seasonality
+from prophet.plot import add_changepoints_to_plot
+from prophet.diagnostics import cross_validation
+from prophet.diagnostics import performance_metrics
+from prophet.plot import plot_cross_validation_metric
+import numpy as np
+import itertools
+from prophet.serialize import model_to_json, model_from_json
+import json
+import tensorflow as tf
+from sklearn import preprocessing
+from sklearn import metrics
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import (Bidirectional, LSTM, Flatten,
+                                     TimeDistributed, RepeatVector,
+                                     Conv1D, MaxPool1D)
+from keras.layers import LSTM, Dense, Bidirectional, MaxPool1D, Dropout
+from statsmodels.tsa.seasonal import seasonal_decompose
 #%%
 
 # Download historical data for "WEAT" (Wheat ETF) from Yahoo Finance
@@ -840,7 +865,7 @@ ticker = "INTC"
 # schaeffler
 ticker = "SHA.DE"
 
-ticker = "LHA.DE"
+#ticker = "LHA.DE"
 stra_tester = YearOnYearStrategy(ticker=ticker)
 backtested_results = stra_tester.backtest(profit_rate=None, 
                                           stop_loss=30,
@@ -968,34 +993,46 @@ Determine where and in which months the lowest price is found and highest
 and use that to improve the trading strategy
 """
 
-#%%
+
 # %%  TODO: time series forecasting and decompostion of stocks<
-import pandas as pd
-import numpy as np
-import datetime
-import matplotlib.pyplot as plt
-import seaborn as sns
-import plotly.express as px
-from prophet import Prophet
-from prophet.plot import plot_seasonality
-from prophet.plot import add_changepoints_to_plot
-from prophet.diagnostics import cross_validation
-from prophet.diagnostics import performance_metrics
-from prophet.plot import plot_cross_validation_metric
-import numpy as np
-import itertools
-from prophet.serialize import model_to_json, model_from_json
-import json
-import tensorflow as tf
-from sklearn import preprocessing
-from sklearn import metrics
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import (Bidirectional, LSTM, Flatten,
-                                     TimeDistributed, RepeatVector,
-                                     Conv1D, MaxPool1D)
-from keras.layers import LSTM, Dense, Bidirectional, MaxPool1D, Dropout
 
 
+
+#%%
+def decompose_timeseries(data, variable_to_decompose,
+                         plot_width = 15, plot_height = 15):
+    decomposition = seasonal_decompose(data[[variable_to_decompose]], period=1)
+
+    trend = decomposition.trend
+    seasonal = decomposition.seasonal
+    residual = decomposition.resid
+
+    fig = plt.figure(figsize=(plot_width,plot_height))
+    ax1 = fig.add_subplot(411)
+    ax2 = fig.add_subplot(412)
+    ax3 = fig.add_subplot(413)
+    ax4 = fig.add_subplot(414)
+    ax1.set_title(f'Original Time Series - {variable_to_decompose}')
+    ax1.plot(data[variable_to_decompose])
+    ax2.set_title('Trend')
+    ax2.plot(trend)
+    ax3.set_title('Seasonality')
+    ax3.plot(seasonal)
+    ax4.set_title('Residuals')
+    ax4.plot(residual)
+    plt.tight_layout()
+    return plt.show()
+
+
+#%%
+
+scaeffler_df = stra_tester.data#.index#.info()
+
+scaeffler_df.index = pd.to_datetime(scaeffler_df.index)
+
+scaeffler_df.set_index(scaeffler_df["Date"], inplace=True)
+#%%
+decompose_timeseries(data=stra_tester.data, variable_to_decompose='Close')
 
 
 
