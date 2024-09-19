@@ -1035,6 +1035,11 @@ scaeffler_df.set_index(scaeffler_df["Date"], inplace=True)
 decompose_timeseries(data=stra_tester.data, variable_to_decompose='Close')
 
 
+#%%
+
+model = Prophet(seasonality_mode="multiplicative")
+
+
 
 
 #%%
