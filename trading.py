@@ -865,7 +865,7 @@ ticker = "INTC"
 # schaeffler
 ticker = "SHA.DE"
 
-#ticker = "LHA.DE"
+ticker = "LHA.DE"
 stra_tester = YearOnYearStrategy(ticker=ticker)
 backtested_results = stra_tester.backtest(profit_rate=None, 
                                           stop_loss=30,
@@ -877,7 +877,7 @@ backtested_results
 
 #%%
 
-stra_tester.data.index[0] - stra_tester.data.index[1]
+#stra_tester.data.index[0] - stra_tester.data.index[1]
 #%%    
 total_invested = 0
 realized_amount = 0
@@ -1000,8 +1000,9 @@ and use that to improve the trading strategy
 
 #%%
 def decompose_timeseries(data, variable_to_decompose,
-                         plot_width = 15, plot_height = 15):
-    decomposition = seasonal_decompose(data[[variable_to_decompose]], period=1)
+                         plot_width = 15, plot_height = 15,
+                         period=1):
+    decomposition = seasonal_decompose(data[[variable_to_decompose]], period=period)
 
     trend = decomposition.trend
     seasonal = decomposition.seasonal
@@ -1032,15 +1033,52 @@ scaeffler_df.index = pd.to_datetime(scaeffler_df.index)
 
 scaeffler_df.set_index(scaeffler_df["Date"], inplace=True)
 #%%
-decompose_timeseries(data=stra_tester.data, variable_to_decompose='Close')
+decompose_timeseries(data=stra_tester.data, variable_to_decompose='Close',
+                     period=5)
 
 
 #%%
 
 model = Prophet(seasonality_mode="multiplicative")
 
+#%%
+input_data = (scaeffler_df.rename(columns={"Date": "ds", "Close": "y"})
+ [["ds", "y", "Volume", "day"]])
 
+#%%
 
+model.add_regressor(name="Volume")
+model.fit(input_data)
+
+#%%  validate model
+model_cross_validate = cross_validation(model, horizon=30,
+                                        parallel="processes",
+                                        period=90
+                                        )
+
+#%%
+
+param_grid_m = {"changepoint_prior_scale": [0.5, 0.1, 0.01, 0.001],
+                "seasonality_prior_scale": [10.0, 1, 0.1, 0.01],
+                "seasonality_mode": ["additive", "multiplicative"]
+                }
+
+all_params_m = [dict(zip(param_grid_m.keys(), value))
+                for value in itertools.product(*param_grid_m.values())
+                ]
+
+#%%
+rmse_values_m = []
+for params in all_params_m:
+    model = Prophet(**params)
+    model.add_regressor(name="Volume")
+    model.fit(input_data)
+    df_cv = cross_validation(model, horizon="30 days")
+    df_p = performance_metrics(df_cv, rolling_window=1)
+    rmse_values_m.append(df_p["rmse"].values[0])
+    
+
+    
 
 #%%
 px.line(data_frame=scaeffler_df, 
