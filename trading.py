@@ -1056,6 +1056,16 @@ model_cross_validate = cross_validation(model, horizon=30,
                                         period=90
                                         )
 
+
+#%%
+
+perfmetric = performance_metrics(df=model_cross_validate, monthly=True)
+
+#%%
+plot_cross_validation_metric(model_cross_validate, metric="rmse")
+
+
+#%%
 #%%
 
 param_grid_m = {"changepoint_prior_scale": [0.5, 0.1, 0.01, 0.001],
@@ -1079,7 +1089,59 @@ for params in all_params_m:
     
 
     
+#%%   #####################                   ###################
 
+dumy_model = Prophet()
+
+dumy_model.fit(df=input_data)
+
+#%%
+future = dumy_model.make_future_dataframe(periods=10)
+
+forecast = dumy_model.predict(future)
+
+#%%
+
+fig = dumy_model.plot(forecast, xlabel="Date", ylabel="stock price")
+plt.title("Schaeffler stock price prediction")
+plt.show()
+
+
+#%% plot forecast components
+fig2 = dumy_model.plot_components(forecast)
+plt.show()
+
+
+#%%
+forecast["yearly"]
+
+px.line(data_frame=forecast, y="yearly", template="plotly_dark")
+#%%
+
+scdf = scaeffler_df.groupby(["year", "month_name"])["Close"].agg(["min", "max"])
+
+#%%
+scdf.reset_index(inplace=True)#.columns#[scdf["month_name"].isin(["October", "January"])]
+
+
+
+#%% # results shows potential of buying in october and selling in january to make profit
+scdf[scdf["month_name"].isin(["October", "January"])]#["Close"].agg(["min", "max"])
+
+#%%  approach to analysis 
+"""
+find seasonal plot and use it to determine key date trading
+
+develop a trading system that
+1. takes data and transform it to various components
+2. Plot that components as graphs and seen it to a deep learning model
+3. the model then describe an insight and recommend a trading strategy
+
+"""
+
+#%%
+
+forecast
 #%%
 px.line(data_frame=scaeffler_df, 
         y="Close",
