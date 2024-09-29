@@ -4,3 +4,22 @@ Analyze SHL and SIE stocks for correlation
 # and taking profit at maximum of previous year  
 
 
+
+# develop an app for trading price visualization
+1. should be able to run it as a package from the terminal and python file
+
+
+Features:
+Input company name / stock symbol and show visualization on the screen
+Funtion to filter dates of stocks and shows calculated returns based start and end of those those date
+
+Decompose the price into trend, seasonality and other components on 
+forecasting of stock price
+
+monthly and weekly analysis with boxplot to display price variation
+
+
+
+
+
+

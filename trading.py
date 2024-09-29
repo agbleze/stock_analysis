@@ -1111,6 +1111,39 @@ plt.show()
 fig2 = dumy_model.plot_components(forecast)
 plt.show()
 
+#%%
+
+fig2
+#%%
+
+forecast.yearly
+
+#%%
+from prophet.plot import get_seasonality_plotly_props
+
+#%%
+
+yr_seasonality = get_seasonality_plotly_props(dumy_model, name="yearly")
+
+
+#%%
+
+scatter = yr_seasonality["traces"][0]
+yval = scatter.y
+xval = scatter.x
+
+#%%
+
+px.line(x=xval, y=yval)
+
+#%%
+input_data.ds.unique()
+
+#%%
+
+scae2017 = scaeffler_df[scaeffler_df["year"]==2017]
+
+px.line(data_frame=scae2017, y="Close")
 
 #%%
 forecast["yearly"]
@@ -1139,9 +1172,259 @@ develop a trading system that
 
 """
 
+
 #%%
 
-forecast
+df_dp = scaeffler_df[["Close", "Volume", "month", "day", "weekday"]]
+
+test_df = df_dp.tail(90)
+
+train_df = df_dp.drop(test_df.index)
+
+columns_to_scale = ["Volume"]
+
+minmax_scaler = preprocessing.MinMaxScaler()
+
+minmax_scaler.fit(train_df[columns_to_scale])
+
+train_df[columns_to_scale] = minmax_scaler.transform(train_df[columns_to_scale])
+
+test_df[columns_to_scale] = minmax_scaler.transform(test_df[columns_to_scale])
+
+
+#%%
+def horizon_style_data_splitter(predictors: pd.DataFrame,
+                                target: pd.DataFrame, start: int,
+                                end: int, window: int, horizon: int
+                                ):
+    X = []
+    y = []
+    start = start + window
+    if end is None:
+        end = len(predictors) - horizon
+
+    for i in range(start, end):
+        indices = range(i-window, i)
+        X.append(predictors.iloc[indices])
+
+        indicey = range(i+1, i+1+horizon)
+        y.append(target.iloc[indicey])
+    return np.array(X), np.array(y)
+
+
+dataX = train_df[train_df.columns[1:]]
+
+dataY = train_df[['Close']]
+
+hist_window_multi = 180
+horizon_multi = 90
+TRAIN_SPLIT = 4930
+
+x_train_multi, y_train_multi = horizon_style_data_splitter(predictors=dataX, target=dataY,
+                                                         start=0, end=TRAIN_SPLIT,
+                                                         window=hist_window_multi,
+                                                         horizon=horizon_multi
+                                                         )
+
+x_val_multi, y_val_multi = horizon_style_data_splitter(predictors=dataX, target=dataY,
+                                                     start=TRAIN_SPLIT, end=None,
+                                                     window=hist_window_multi,
+                                                     horizon=horizon_multi
+                                                     )
+
+#%%
+BATCH_SIZE = 64
+BUFFER_SIZE = 100
+
+
+train_data_multi = tf.data.Dataset.from_tensor_slices((x_train_multi, y_train_multi))
+train_data_multi = train_data_multi.cache().shuffle(BUFFER_SIZE).batch(BATCH_SIZE).repeat()
+
+val_data_multi = tf.data.Dataset.from_tensor_slices((x_val_multi, y_val_multi))
+val_data_multi = val_data_multi.batch(BATCH_SIZE).repeat()
+
+#%%
+from sklearn.metrics import mean_absolute_percentage_error
+
+def timeseries_evaluation_metrics(y_true, y_pred):
+    print('Evaluation metric results:-')
+    print(f'MSE is : {metrics.mean_squared_error(y_true, y_pred)}')
+    print(f'MAE is : {metrics.mean_absolute_error(y_true, y_pred)}')
+    print(f'RMSE is : {np.sqrt(metrics.mean_squared_error(y_true, y_pred))}')
+    print(f'MAPE is : {mean_absolute_percentage_error(y_true, y_pred)}')
+    print(f'R2 is : {metrics.r2_score(y_true, y_pred)}', end='\n\n')
+
+#%%
+def plot_loss_history(history):
+    plt.plot(history.history['loss'])
+    plt.plot(history.history['val_loss'])
+    plt.title('Model loss')
+    plt.ylabel('loss')
+    plt.xlabel('epoch')
+    plt.legend(['train loss', 'validation loss'], loc='upper left')
+    plt.rcParams['figure.figsize'] = [16, 9]
+    return plt.show()
+
+#%%
+tf.random.set_seed(2023)
+np.random.seed(2023)
+
+lstm_multi = tf.keras.models.Sequential()
+lstm_multi.add(tf.keras.layers.LSTM(units=556, input_shape=x_train_multi.shape[-2:],
+                                    return_sequences=True)
+               )
+lstm_multi.add(tf.keras.layers.LSTM(units=556, return_sequences=False))
+lstm_multi.add(tf.keras.layers.Dense(256))
+lstm_multi.add(tf.keras.layers.Dense(256))
+lstm_multi.add(tf.keras.layers.Dense(units=horizon_multi))
+lstm_multi.compile(optimizer='adam', loss='mse')
+
+
+#%%
+model_path_lstm_multi = 'model_store/lstm_multivariate.h5'
+
+EVALUATION_INTERVAL = 50
+EPOCHS = 100
+history_multi = lstm_multi.fit(x=train_data_multi, epochs=EPOCHS,
+                         steps_per_epoch=EVALUATION_INTERVAL,
+                         validation_data=val_data_multi,
+                         validation_steps=5, verbose=1,
+                         callbacks=[
+                                    tf.keras.callbacks.ModelCheckpoint(model_path_lstm_multi,
+                                                                       monitor='val_loss',
+                                                                       save_best_only=True,
+                                                                       mode="min",
+                                                                       verbose=0
+                                                                       )
+                                    ]
+                         )
+#%%
+trained_model_multi = tf.keras.models.load_model(model_path_lstm_multi)
+
+plot_loss_history(history_multi)
+
+#%%
+data_val = train_df[train_df.columns[1:]].tail(hist_window_multi)
+val_rescaled = np.array(data_val).reshape(1, data_val.shape[0], data_val.shape[1])
+predicted_results = trained_model_multi.predict(val_rescaled)
+
+#%%
+timeseries_evaluation_metrics(y_true=test_df['Close'],
+                                   y_pred=predicted_results[0]
+                                   )
+
+def compare_forecast_actual_graph(forecast, actual, title="Actual vs Predicted",
+                                  yaxsis_label="page turn count",
+                                  xaxsis_label="horizon (hourly)",
+                                  legend: set = ('Actual', 'Predicted')):
+    plt.plot(list(actual['Close']))
+    plt.plot(list(forecast[0]))
+    plt.title(title)
+    plt.ylabel(yaxsis_label)
+    plt.xlabel(xaxsis_label)
+    plt.legend(legend)
+    return plt.show()
+#%%
+compare_forecast_actual_graph(forecast=predicted_results, actual=test_df)
+
+
+#%%
+bi_lstm_multi = tf.keras.models.Sequential()
+bi_lstm_multi.add(tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(units=556,
+                                            input_shape=x_train_multi.shape[-2:],
+                                            return_sequences=True))
+               )
+bi_lstm_multi.add(tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(units=556, return_sequences=False))
+                  )
+bi_lstm_multi.add(tf.keras.layers.Dense(256))
+bi_lstm_multi.add(tf.keras.layers.Dense(256))
+bi_lstm_multi.add(tf.keras.layers.Dense(units=horizon_multi))
+bi_lstm_multi.compile(optimizer='adam', loss='mse')
+
+model_path_bilstm_multi = 'model_store/bi_lstm_multivariate.h5'
+
+bi_lstm_history_multi = bi_lstm_multi.fit(x=train_data_multi, epochs=EPOCHS,
+                         steps_per_epoch=EVALUATION_INTERVAL,
+                         validation_data=val_data_multi,
+                         validation_steps=5, verbose=1,
+                         callbacks=[
+                                    tf.keras.callbacks.ModelCheckpoint(model_path_bilstm_multi,
+                                                                       monitor='val_loss',
+                                                                       save_best_only=True,
+                                                                       mode="min",
+                                                                       verbose=0
+                                                                       )
+                                    ]
+                         )
+
+#%%
+
+trained_model_bilstm_multi = tf.keras.models.load_model(model_path_bilstm_multi)
+
+plot_loss_history(bi_lstm_history_multi)
+
+#%%
+bilstm_predicted_results = trained_model_bilstm_multi.predict(val_rescaled)
+timeseries_evaluation_metrics(y_true=test_df['Close'],
+                                   y_pred=bilstm_predicted_results[0]
+                                   )
+
+#%%
+compare_forecast_actual_graph(forecast=bilstm_predicted_results, actual=test_df)
+
+#%%
+cnn_model_multi = Sequential()
+cnn_model_multi.add(Conv1D(filters=64, kernel_size=3, activation='relu',
+                                       input_shape=(x_train_multi.shape[1],
+                                                    x_train_multi.shape[2]
+                                                    )
+                                       )
+                                )
+cnn_model_multi.add(MaxPool1D(pool_size=2))
+cnn_model_multi.add(tf.keras.layers.Dense(556))
+cnn_model_multi.add(Flatten())
+cnn_model_multi.add(Dense(556, activation='relu'))
+cnn_model_multi.add(tf.keras.layers.Dense(256))
+cnn_model_multi.add(tf.keras.layers.Dense(256))
+cnn_model_multi.add(Dense(horizon_multi))
+cnn_model_multi.compile(optimizer='adam', loss='mse')
+
+model_path_cnn_multi = 'model_store/cnn_multivariate.h5'
+
+
+cnn_history_multi = cnn_model_multi.fit(x=train_data_multi, epochs=EPOCHS,
+                         steps_per_epoch=EVALUATION_INTERVAL,
+                         validation_data=val_data_multi,
+                         validation_steps=5, verbose=1,
+                         callbacks=[
+                                    tf.keras.callbacks.ModelCheckpoint(model_path_cnn_multi,
+                                                                       monitor='val_loss',
+                                                                       save_best_only=True,
+                                                                       mode="min",
+                                                                       verbose=0
+                                                                       )
+                                    ]
+                         )
+
+#%%
+trained_model_cnn_multi = tf.keras.models.load_model(model_path_cnn_multi)
+
+plot_loss_history(cnn_history_multi)
+
+#%%
+cnn_predicted_results = trained_model_cnn_multi.predict(val_rescaled)
+
+timeseries_evaluation_metrics(y_true=test_df['Close'],
+                                y_pred=cnn_predicted_results[0]
+                            )
+
+compare_forecast_actual_graph(forecast=cnn_predicted_results, 
+                              actual=test_df,
+                              yaxsis_label="Stock close price",
+                              xaxsis_label="trading days")
+
+
+
 #%%
 px.line(data_frame=scaeffler_df, 
         y="Close",
