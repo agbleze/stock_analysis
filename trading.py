@@ -1096,7 +1096,7 @@ dumy_model = Prophet()
 dumy_model.fit(df=input_data)
 
 #%%
-future = dumy_model.make_future_dataframe(periods=10)
+future = dumy_model.make_future_dataframe(periods=1)
 
 forecast = dumy_model.predict(future)
 
@@ -1172,6 +1172,38 @@ develop a trading system that
 
 """
 
+#%%
+
+ticker = "VWSB.DE"
+ticker = "RWE.DE"
+ticker = "MSFT"
+ticker = "AAG.HM"
+vestas = YearOnYearStrategy(ticker=ticker)    
+   
+backtested_results = vestas.backtest(profit_rate=None, 
+                                          stop_loss=15,
+                                          accumulated_investment=True, 
+                                          monitor_duration=24
+                                          ) 
+print(ticker)
+backtested_results 
+#%%
+
+vestas_model = Prophet()
+vestas_input_data = (vestas.data.rename(columns={"Date": "ds", "Close": "y"})
+ [["ds", "y", "Volume", "day"]])
+vestas_model.fit(df=vestas_input_data)
+vestas_future = dumy_model.make_future_dataframe(periods=1)
+
+vestas_forecast = vestas_model.predict(vestas_future)
+fig = vestas_model.plot(vestas_forecast, xlabel="Date", ylabel="stock price")
+plt.title(f"{ticker} stock price prediction")
+plt.show()
+
+
+#%% plot forecast components
+fig2 = vestas_model.plot_components(vestas_forecast)
+plt.show()
 
 #%%
 
