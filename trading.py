@@ -1178,12 +1178,15 @@ ticker = "VWSB.DE"
 ticker = "RWE.DE"
 ticker = "MSFT"
 ticker = "AAG.HM"
+ticker = "NVDA"
+ticker = "LHA.DE"
+#ticker = "SHA.DE"
 vestas = YearOnYearStrategy(ticker=ticker)    
    
 backtested_results = vestas.backtest(profit_rate=None, 
-                                          stop_loss=15,
+                                          stop_loss=30,
                                           accumulated_investment=True, 
-                                          monitor_duration=24
+                                          monitor_duration=18
                                           ) 
 print(ticker)
 backtested_results 
@@ -1193,7 +1196,7 @@ vestas_model = Prophet()
 vestas_input_data = (vestas.data.rename(columns={"Date": "ds", "Close": "y"})
  [["ds", "y", "Volume", "day"]])
 vestas_model.fit(df=vestas_input_data)
-vestas_future = dumy_model.make_future_dataframe(periods=1)
+vestas_future = vestas_model.make_future_dataframe(periods=1)
 
 vestas_forecast = vestas_model.predict(vestas_future)
 fig = vestas_model.plot(vestas_forecast, xlabel="Date", ylabel="stock price")
@@ -1462,8 +1465,6 @@ px.line(data_frame=scaeffler_df,
         y="Close",
         template="plotly_dark"
         )
-
-#%%
 
 #%%                
     
