@@ -1487,12 +1487,7 @@ px.line(data_frame=scaeffler_df,
 
 scaeffler_df[scaeffler_df.year==2018]["Close"].is_monotonic_increasing
 #%%
-scaeffler_df["Close"].mon
-#%%
-(5.82/7.05)*100
-
-#%%
-(70/100)*11.355
+scaeffler_df["Close"]
 #%%
 
 import pandas as pd
